@@ -1,5 +1,16 @@
+#ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING    //flag
+#define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
+#endif
+
+
+
 #include <stdio.h>
 #include <windows.h>
+
+
+
+
+
 /* 
 what this code should do? 
   1.detect terminal size 
@@ -57,8 +68,60 @@ void init_terminal(){
 
 //fxn to enable virt term processing etc
 void enable_vt_and_raw_mode(){ 
-    //code to enable vt and settings i want
+    /*to enable ansi ensacpe codes = vtp
+        MODES=bundles of on/off bits
+           dont overwrite blindly ,will flip only the bits i want
+              through | 
+    */
+   DWORD outMode = originalOutMode; //og val of o/p mode [32bit val]
+   outMode = outMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING; //[flipped 32 bit val]
+  // | = or : turn this bit on leve rest as it is.  
+ 
+
+   DWORD inMode = originalInMode;  //og val for in/p mode [32 bit]
+   inMode = inMode & ~(ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT); //flipped mode [32bit val]
+
+   // ~ flip the bits, & then clear them
+   //& -> turn this bit off , leave rest alone
+   //hence , line buffering , echo are turned off
+//APPLY MODIFIED in,out MODES
+
+   SetConsoleMode(hOut , outMode);
+   SetConsoleMode(hIn , inMode);
+
+
+  //test print escape codes
+   //hide cursor 
+     printf("\033[?25l");
+   //alt screen
+     printf("\033[?1049h");
+   //flush ouptut 
+     fflush(stdout);
 }
+
+//fxn to restore terminal | void = only modif. bits=modes
+void restore_terminal(){
+	/* 
+     1.show cursor
+     2.reset colours
+     3.leave alt screen
+     4.fflush(stdout)
+     5.restore console modes
+	*/
+    
+    printf("\033[?25h"); //show cursor
+    printf("\033[0m"); //reset colors
+ 
+    printf("\033[?1049l");
+    fflush(stdout);
+
+  //restore the console modes to og
+      SetConsoleMode(hOut , originalOutMode);
+      SetConsoleMode(hIn , originalInMode);
+}
+
+
+
 
 
 
@@ -67,11 +130,10 @@ void enable_vt_and_raw_mode(){
 int main(){
   
   init_terminal();
-
-  TermSize size = get_term_size(); //current
- 
-  printf("rows=%d cols=%d\n",size.rows , size.cols); //to check
-
+  enable_vt_and_raw_mode();
+  printf("\033[38;5;208morange test\033[0m");
+  Sleep(3000); 
+  restore_terminal();
  return 0;
 }
 
