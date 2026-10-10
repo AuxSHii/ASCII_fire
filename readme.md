@@ -1,9 +1,13 @@
 # ascii_fire
 
-A doom-style fire effect that runs in the terminal, written in C. it draws with ANSI 256-color, resizes with the window, and asks before it quits.
+a doom-style fire effect that runs in the terminal, written in C . it draws with ANSI 256-color , resizes with the window, and asks before it quits.
 
 i built it to learn C and the Windows console API, so the code is commented heavily and in my own words.
 YOU WILL find a lot of comments here , i tend to write ANNOYINGLY large amount of comments when i am learning
+
+<img width="1366" height="768" alt="doom fire" src="https://github.com/user-attachments/assets/e5cc696d-de49-498d-99e3-2b2190deaa17" />
+
+
 
 **Windows only for now.** Built with MinGW gcc and run in plain cmd on Win10. A Linux version would need termios/ioctl in place of the Windows console calls, and i haven't done that yet.
 
@@ -15,6 +19,9 @@ fire.exe
 ```
 
 No libraries beyond what ships with MinGW.
+
+<img width="683" height="396" alt="quit prompt" src="https://github.com/user-attachments/assets/491fecb1-e252-4896-87fb-9446b750865e" />
+
 
 ## Controls
 
