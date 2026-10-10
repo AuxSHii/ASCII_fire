@@ -34,3 +34,5 @@ WINAPI (The Calling Convention)
 WINAPI is a preprocessor macro that resolves to __stdcall on x86 architectures.
 • The calling convention tells the compiler how to pass arguments to the function (pushed onto the stack from right to left) and who cleans up the stack (the called function itself, rather than the caller).
 • It ensures strict compatibility and interoperability across different compilers and programming languages linking against the Windows operating system libraries.
+HEAT BUFFER ARRAY-
+each frame, every cell copies the heat of a cell below it, shifted randomly left or right (the wind flicker) and cooled by a random amount. Heat dies out as it climbs, and the fuel row at the bottom keeps feeding it.
