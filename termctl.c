@@ -4,11 +4,11 @@
 
 
 
+
+#include <stdlib.h>
+#include <conio.h>
 #include <stdio.h>
 #include <windows.h>
-
-
-
 
 
 /* 
@@ -53,6 +53,104 @@ TermSize get_term_size(){
     return result;
 
 }
+
+
+//fxn to restore terminal | void = only modif. bits=modes
+void restore_terminal(){
+	/* 
+     1.show cursor
+     2.reset colours
+     3.leave alt screen
+     4.fflush(stdout)
+     5.restore console modes
+	*/
+    
+    printf("\033[?25h"); //show cursor
+    printf("\033[0m"); //reset colors
+ 
+    printf("\033[?1049l");
+    fflush(stdout);
+
+  //restore the console modes to og
+      SetConsoleMode(hOut , originalOutMode);
+      SetConsoleMode(hIn , originalInMode);
+}
+
+
+
+
+
+
+
+
+
+volatile int quit_request_flag = 0;  //golbal flag decl,
+ //volatile - var can change, dont cache it.
+ // 0=not quiting , 1 = ctl+c pressed = quit
+
+
+
+ //Quiting HANDLERS
+ /* 
+ BOOL = legacy windows 4byte int [ 0= false , 1 0r any non zero = true]
+   BOOL WINAPI = 
+  
+ DWORD event = 32bit signal for actions by user [ex: ctrl+c , ctrl+break, window closed] 
+ */ 
+BOOL WINAPI ctrl_handler(DWORD event){
+	if(event == CTRL_C_EVENT) {  
+		quit_request_flag = 1; //rasise quit flag
+	  return TRUE;
+	}
+	else return FALSE; //rest let win do whrvr it does
+  }
+
+  //register handler 
+  void install_ctrl_handler() {
+  	SetConsoleCtrlHandler(ctrl_handler ,TRUE);
+  	//arg1=fxn to call
+  	//arg2=true-add it, false=remove it [win api call]
+  }
+  //quit prompt to ask user
+void check_quit_prompt() {
+	if (quit_request_flag == 0)
+	{
+	  return;
+	}
+
+	TermSize size = get_term_size();  //get terminal size
+     
+    /* 1.move cursor to bottom
+       2.erase line
+       3.print msg
+       4.fflush
+    */
+    printf("\033[%d;1H", size.rows);   // %d gets replaced by size.rows (e.g. 30)
+    printf("\033[2K");
+
+    printf("quit? (y/n)");
+    fflush(stdout);
+
+    while(1){  //indef loop
+    	int key = getch(); //waits for 1 key
+    	if (key == 'y' || key == 'Y')
+    	{
+    		restore_terminal();
+    		exit(0);
+    	}
+    	if (key == 'n' || key == 'N')
+    	{
+    		break;  //leave the loop
+    	}
+     }
+        
+        printf("\033[2K");
+        quit_request_flag = 0;  //reset , so ctrl c work next time
+        } 
+      
+     
+
+
 //fxn to init terminal
 //job: fetch handles , remembr og settings
 
@@ -99,41 +197,24 @@ void enable_vt_and_raw_mode(){
      fflush(stdout);
 }
 
-//fxn to restore terminal | void = only modif. bits=modes
-void restore_terminal(){
-	/* 
-     1.show cursor
-     2.reset colours
-     3.leave alt screen
-     4.fflush(stdout)
-     5.restore console modes
-	*/
-    
-    printf("\033[?25h"); //show cursor
-    printf("\033[0m"); //reset colors
- 
-    printf("\033[?1049l");
-    fflush(stdout);
-
-  //restore the console modes to og
-      SetConsoleMode(hOut , originalOutMode);
-      SetConsoleMode(hIn , originalInMode);
-}
-
-
-
-
-
-
 
 
 int main(){
   
   init_terminal();
   enable_vt_and_raw_mode();
-  printf("\033[38;5;208morange test\033[0m");
-  Sleep(3000); 
-  restore_terminal();
+  install_ctrl_handler();
+  
+  int counter = 0;
+while(1){
+    printf("\033[H");              // cursor to top-left
+    printf("running... %d", counter);
+    fflush(stdout);                // push it to the screen now
+    counter++;
+    check_quit_prompt();
+    Sleep(100);
+}
+
  return 0;
 }
 
