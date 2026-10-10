@@ -32,13 +32,23 @@ HANDLE hOut;
 DWORD originalInMode = 0;  //decalration
 DWORD originalOutMode = 0;
 
+int *fire = NULL;   //ptr to fire grid [at null=pt at nothin]
+                    //array ptr
+int rows = 0;   //init grid sizes
+int cols = 0;
+
+volatile int quit_request_flag = 0;  //golbal flag decl,
+ //volatile - var can change, dont cache it.
+ // 0=not quiting , 1 = ctl+c pressed = quit
+
+
 //fxn to get termsize 
 TermSize get_term_size(){
 	CONSOLE_SCREEN_BUFFER_INFO info; //provide by os
 	GetConsoleScreenBufferInfo(hOut, &info); //put it in info
 
-    int cols = (info.srWindow.Right - info.srWindow.Left) + 1; //take out cols and row from info                                    
-    int rows = (info.srWindow.Bottom - info.srWindow.Top) + 1; //info.srWindow = edges of terminal window
+    int w = (info.srWindow.Right - info.srWindow.Left) + 1; //take out cols and row from info                                    
+    int h = (info.srWindow.Bottom - info.srWindow.Top) + 1; //info.srWindow = edges of terminal window
      
      //+1 because edges are inclusive
 
@@ -46,8 +56,8 @@ TermSize get_term_size(){
 
     TermSize result;
 
-    result.cols=cols;
-    result.rows=rows;
+    result.cols=w;
+    result.rows=h;
 
     //return result struct
     return result;
@@ -77,16 +87,40 @@ void restore_terminal(){
 }
 
 
+//fxn to runtime mem alloc for fire buffer/grid
+//take row and cols then 
+void alloc_buffer(int r, int c){
+   rows = r;
+   cols = c;
 
+   fire = calloc(rows * cols, sizeof(int));
+   //error resolving
+   if (fire == NULL)
+   {
+   	   restore_terminal();
+   	   fprintf(stderr, "failure in memory alloc");
+   	   exit(1);
+   }
+}
 
+//free buffer/fire grid memory
+void free_buffer() {
+	free(fire);
+	fire=NULL;
+}
 
+//check resize
+void check_resize(){
+	TermSize  cur = get_term_size(); //curretn size
 
-
-
-
-volatile int quit_request_flag = 0;  //golbal flag decl,
- //volatile - var can change, dont cache it.
- // 0=not quiting , 1 = ctl+c pressed = quit
+	if (cur.rows != rows || cur.cols != cols)  
+	{
+		free_buffer();  
+		alloc_buffer(cur.rows, cur.cols); //fire grid again with current size
+		printf("\033[2J");
+	}
+}
+//ACESSING A CELL  => row y, column x  ->  fire[y * cols + x] {i think so}
 
 
 
@@ -136,6 +170,7 @@ void check_quit_prompt() {
     	if (key == 'y' || key == 'Y')
     	{
     		restore_terminal();
+    		free_buffer();
     		exit(0);
     	}
     	if (key == 'n' || key == 'N')
@@ -195,7 +230,9 @@ void enable_vt_and_raw_mode(){
      printf("\033[?1049h");
    //flush ouptut 
      fflush(stdout);
-}
+
+    //inMode = (inMode & ~ENABLE_QUICK_EDIT_MODE) | ENABLE_EXTENDED_FLAGS;
+}    // quickedit bit off
 
 
 
@@ -204,17 +241,17 @@ int main(){
   init_terminal();
   enable_vt_and_raw_mode();
   install_ctrl_handler();
-  
-  int counter = 0;
-while(1){
-    printf("\033[H");              // cursor to top-left
-    printf("running... %d", counter);
-    fflush(stdout);                // push it to the screen now
-    counter++;
-    check_quit_prompt();
-    Sleep(100);
-}
 
+  TermSize s = get_term_size();
+  alloc_buffer(s.rows , s.cols);
+
+  while(1){  //indef loop
+       check_resize();
+       printf("\033[H");  //move cursor home
+      printf("size: %d x %d  cells: %d   ", rows, cols, rows * cols); 
+      fflush(stdout);
+      check_quit_prompt();
+      Sleep(50);
+  }
  return 0;
 }
-
